@@ -1,4 +1,4 @@
-package prj.rivery.test;
+package prj.rively.test;
 
 public class Performance {
 	

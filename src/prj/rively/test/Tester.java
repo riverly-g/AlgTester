@@ -1,4 +1,4 @@
-package prj.rivery.test;
+package prj.rively.test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
