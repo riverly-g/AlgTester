@@ -6,34 +6,33 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InaccessibleObjectException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.NumberFormat;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.function.Consumer;
+
+import prj.rively.test.option.InputType;
+import prj.rively.test.option.PrintType;
 
 public class Tester {
 
-	public static short DEBUG_ALWAYS = 0;
-	public static short DEBUG_FAILURE = 1;
-	
-	public static short SYSTEM_IN = 0;
-	public static short PARAMETER = 1;
-	
-	public static short PRINT_ALL = 0;
-	public static short PRINT_PARAMETER_ONLY = 1;
-	public static short PRINT_RESULT_ONLY = 2;
-	public static short PRINT_MIN = 3;
-	public static short PRINT_NONE = 4;
-	
-	private short inputType = 0;
-	private short printType = 0;
+	private InputType inputType;
+	private PrintType printType = PrintType.PRINT_ALL;
 	
 	private Object target;
 	private String methodName;
 	private Object[] args;
-	private Object[] results;
+	private Object result;
 	
 	private NumberFormat numberFormat = NumberFormat.getInstance();
 	
@@ -69,11 +68,11 @@ public class Tester {
 	
 	public Tester() {}
 	
-	public Tester(short inputType) {
+	public Tester(InputType inputType) {
 		this.inputType = inputType;
 	}
 	
-	public Tester input(short inputType) {
+	public Tester input(InputType inputType) {
 		this.inputType = inputType;
 		return this;
 	}
@@ -109,12 +108,12 @@ public class Tester {
 		return this;
 	}
 	
-	public Tester results(Object ...results) {
-		this.results = results;
+	public Tester result(Object result) {
+		this.result = result;
 		return this;
 	}
 	
-	public Tester print(short print) {
+	public Tester print(PrintType print) {
 		this.printType = print;
 		return this;
 	}
@@ -135,7 +134,7 @@ public class Tester {
 		Class<?>[] types = method.getParameterTypes();
 		int plen = types.length;
 		
-		if(inputType == SYSTEM_IN) {
+		if(inputType == InputType.SYSTEM_IN) {
 			StringBuilder sb = new StringBuilder();
 			int len = args.length;
 			
@@ -151,7 +150,7 @@ public class Tester {
 			
 			for(int i = 0; i < plen; i++) invokeArgs[i] = null;
 			
-		} else if(inputType == PARAMETER) {
+		} else if(inputType == InputType.PARAMETER) {
 
 			invokeArgs = args;
 			
@@ -164,10 +163,10 @@ public class Tester {
 		try {
 			StringBuffer sb = new StringBuffer();
 			
-			if(printType == PRINT_ALL || printType == PRINT_PARAMETER_ONLY) {
+			if(printType == PrintType.PRINT_ALL || printType == PrintType.PRINT_PARAMETER_ONLY) {
 				sb.append(Arrays.deepToString(args));
 				sb.append(" => ");
-			} else if(printType == PRINT_MIN) {
+			} else if(printType == PrintType.PRINT_MIN) {
 				String param = Arrays.deepToString(args);
 				int len = param.length();
 				
@@ -187,7 +186,7 @@ public class Tester {
 			Object result = null;
 			Performance performance = new Performance();
 			
-			if(inputType == SYSTEM_IN) {
+			if(inputType == InputType.SYSTEM_IN) {
 				PrintStream p = System.out;
 				ByteArrayOutputStream bos = new ByteArrayOutputStream();
 				System.setOut(new PrintStream(bos));
@@ -215,11 +214,11 @@ public class Tester {
 				performance.end();
 			}
 			
-			if(printType == PRINT_ALL || printType == PRINT_RESULT_ONLY) {
-				sb.append(result);
+			if(printType == PrintType.PRINT_ALL || printType == PrintType.PRINT_RESULT_ONLY) {
+				sb.append(toString(result));
 				sb.append(" | ");
-			} else if(printType == PRINT_MIN) {
-				String rstr = String.valueOf(result);
+			} else if(printType == PrintType.PRINT_MIN) {
+				String rstr = toString(result);
 				int len = rstr.length();
 				
 				if(len > 20) {
@@ -421,6 +420,101 @@ public class Tester {
 	
 	private boolean isDataType(Class<?> type) {
 		return dataTypeSet.contains(type);
+	}
+	
+	public String toString(Object obj) {
+		Class<?> clazz = obj.getClass();
+		StringBuilder sb = new StringBuilder();
+		
+		if(isDataType(clazz) || clazz.isEnum()) {
+			return String.valueOf(obj);
+		} else if(clazz == String.class) {
+			sb.append("\"");
+			sb.append(obj);
+			sb.append("\"");
+			return sb.toString();
+		} else if(clazz.isArray() || obj instanceof Collection) {
+			sb.append("[");
+		
+			int len = foreach(obj, v -> {
+				sb.append(toString(v));
+				sb.append(",");
+			});
+			
+			if(len > 0) sb.setLength(sb.length()-1);
+			
+			sb.append("]");
+			return sb.toString();
+		} else if(obj instanceof Map) {
+			Map<?,?> map = (Map<?,?>) obj;
+			Set<?> keySet = map.keySet();
+			sb.append("{");
+
+			int len = foreach(keySet, key -> {
+				sb.append(toString(key));
+				sb.append(":");
+				sb.append(toString(map.get(key)));
+				sb.append(",");
+			});
+			
+			if(len > 0) sb.setLength(sb.length()-1);
+
+			sb.append("}");
+			return sb.toString();
+		} else {
+			sb.append("{");
+			
+			Field[] fields = clazz.getDeclaredFields();
+			int len = fields.length;
+			
+			for(int i = 0; i < len; i++) {
+				Field field = fields[i];
+				try {
+					field.setAccessible(true);
+				} catch(InaccessibleObjectException e) {
+					continue;
+				}
+				
+				sb.append(field.getName());
+				sb.append(":");
+				
+				try {
+					sb.append(toString(field.get(obj)));
+				} catch (IllegalArgumentException | IllegalAccessException e) {
+					sb.append("null");
+				}
+				sb.append(",");
+			}
+			if(len > 0) sb.setLength(sb.length()-1);
+
+			sb.append("}");
+			return sb.toString();
+		}
+		
+	}
+	
+	private int foreach(Object obj, Consumer<? super Object> consumer) {
+		Class<?> clazz = obj.getClass();
+		
+		if(clazz.isArray()) {
+			int len = Array.getLength(obj);
+			for(int i = 0; i < len; i++) {
+				consumer.accept(Array.get(obj, i));
+			}
+			return len;
+		} else if(obj instanceof Collection) {
+			Collection<?> collection = (Collection<?>) obj;
+			Iterator<?> iter = collection.iterator();
+			int count = 0;
+			
+			while(iter.hasNext()) {
+				consumer.accept(iter.next());
+				count++;
+			}
+			return count;
+		}
+		
+		return 0;
 	}
 	
 }
