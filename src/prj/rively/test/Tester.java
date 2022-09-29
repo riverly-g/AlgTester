@@ -234,6 +234,11 @@ public class Tester {
 				sb.append(" | ");
 			}
 			
+			if(this.result != null) {
+				if(equlas(result, this.result)) sb.append("Success ");
+				else sb.append("Fail ");
+			}
+			
 			sb.append(numberFormat.format(performance.getTime()/1000000.0));
 			sb.append("ms, ");
 			sb.append(numberFormat.format(performance.getMemory()/1000.0));
@@ -422,16 +427,63 @@ public class Tester {
 		return dataTypeSet.contains(type);
 	}
 	
-	public String toString(Object obj) {
+	private boolean equlas(Object obj, Object target) {
+		if(obj == null && target == null) return true;
+		if(obj == null || target == null) return false;
+		
+		if(target.getClass() == String.class) {
+			return minimize(String.valueOf(target)).equals(minimize(toString(obj)));
+		}
+		
+		Class<?> clazz = obj.getClass();
+		
+		if(clazz != target.getClass()) return false;
+		
+		if(isDataType(clazz) || clazz.isEnum()) {
+			return target.equals(obj);
+		} else if(clazz.isArray()) {
+			int len = Array.getLength(obj);
+			int len2 = Array.getLength(target);
+			
+			if(len != len2) return false;
+			
+			for(int i = 0; i < len; i++) {
+				if(!equlas(Array.get(obj, i), Array.get(target, i))) return false;
+			}
+			
+			return true;
+		} else if(obj instanceof Collection || obj instanceof Map) {
+			return obj.equals(target);
+		} else {
+			Field[] fields = clazz.getDeclaredFields();
+			int len = fields.length;
+			
+			for(int i = 0; i < len; i++) {
+				Field field = fields[i];
+				try {
+					field.setAccessible(true);
+				} catch(InaccessibleObjectException e) {
+					continue;
+				}
+				
+				try {
+					if(!equlas(field.get(obj), field.get(target))) return false;
+				} catch (IllegalArgumentException | IllegalAccessException e) {
+				}
+			}
+			
+			return true;
+		}
+	}
+	
+	private String toString(Object obj) {
 		Class<?> clazz = obj.getClass();
 		StringBuilder sb = new StringBuilder();
 		
 		if(isDataType(clazz) || clazz.isEnum()) {
 			return String.valueOf(obj);
 		} else if(clazz == String.class) {
-			sb.append("\"");
 			sb.append(obj);
-			sb.append("\"");
 			return sb.toString();
 		} else if(clazz.isArray() || obj instanceof Collection) {
 			sb.append("[");
@@ -515,6 +567,10 @@ public class Tester {
 		}
 		
 		return 0;
+	}
+	
+	private String minimize(String str) {
+		return str.replaceAll(" ", ""); 
 	}
 	
 }
