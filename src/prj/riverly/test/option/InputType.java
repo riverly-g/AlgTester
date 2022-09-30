@@ -1,4 +1,4 @@
-package prj.rively.test.option;
+package prj.riverly.test.option;
 
 public enum InputType {
 	SYSTEM_IN,

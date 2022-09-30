@@ -1,4 +1,4 @@
-package prj.rively.test;
+package prj.riverly.test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -21,8 +21,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import prj.rively.test.option.InputType;
-import prj.rively.test.option.PrintType;
+import prj.riverly.test.option.InputType;
+import prj.riverly.test.option.PrintType;
 
 public class Tester {
 
