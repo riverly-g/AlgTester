@@ -17,16 +17,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Consumer;
 
 import prj.riverly.test.option.InputType;
 import prj.riverly.test.option.PrintType;
 
-public class Tester {
+public class AlgTester {
 
-	private InputType inputType;
+	private InputType inputType = InputType.PARAMETER;
 	private PrintType printType = PrintType.PRINT_ALL;
 	
 	private Object target;
@@ -66,18 +65,18 @@ public class Tester {
 		put(double.class, Double.class);
 	}};
 	
-	public Tester() {}
+	public AlgTester() {}
 	
-	public Tester(InputType inputType) {
+	public AlgTester(InputType inputType) {
 		this.inputType = inputType;
 	}
 	
-	public Tester input(InputType inputType) {
+	public AlgTester input(InputType inputType) {
 		this.inputType = inputType;
 		return this;
 	}
 	
-	public Tester clazz(String className, Object ...args) {
+	public AlgTester clazz(String className, Object ...args) {
 		try {
 			Class<?> clazz = Class.forName(className);
 			clazz(clazz, args);
@@ -88,32 +87,37 @@ public class Tester {
 		return this;
 	}
 	
-	public Tester clazz(Class<?> clazz, Object ...args) {
+	public AlgTester clazz(Class<?> clazz) {
+		this.target = newInstance(clazz);
+		return this;
+	}
+	
+	public AlgTester clazz(Class<?> clazz, Object ...args) {
 		this.target = newInstance(clazz, args);
 		return this;
 	}
 	
-	public Tester object(Object object) {
+	public AlgTester object(Object object) {
 		this.target = object;
 		return this;
 	}
 	
-	public Tester method(String method) {
+	public AlgTester method(String method) {
 		this.methodName = method;
 		return this;
 	}
 	
-	public Tester args(Object ...args) {
+	public AlgTester args(Object ...args) {
 		this.args = args;
 		return this;
 	}
 	
-	public Tester result(Object result) {
+	public AlgTester result(Object result) {
 		this.result = result;
 		return this;
 	}
 	
-	public Tester print(PrintType print) {
+	public AlgTester print(PrintType print) {
 		this.printType = print;
 		return this;
 	}
@@ -277,7 +281,7 @@ public class Tester {
 
 			boolean match = false;
 			int len = constructors.length;
-			int alen = args.length;
+			int alen = args == null ? 0 : args.length;
 			
 			Constructor<?> noArgs = null;
 			
@@ -477,6 +481,7 @@ public class Tester {
 	}
 	
 	private String toString(Object obj) {
+		if(obj == null) return "null";
 		Class<?> clazz = obj.getClass();
 		StringBuilder sb = new StringBuilder();
 		
