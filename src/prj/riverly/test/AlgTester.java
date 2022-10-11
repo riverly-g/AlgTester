@@ -129,7 +129,7 @@ public class AlgTester {
 
 	private Object test(Object obj, Method method, Object ...args) {
 		if(method == null) {
-			System.out.println("Invalid Method");
+			System.err.println("Invalid Method");
 			return null;
 		}
 		
@@ -156,22 +156,23 @@ public class AlgTester {
 			
 		} else if(inputType == InputType.PARAMETER) {
 
-			invokeArgs = args;
+			invokeArgs = Arrays.copyOf(args, args.length);
 			
 			if(!checkArguments(types, invokeArgs)) {
-				System.out.println("Invalid Arguments");
+				System.err.println("Invalid Arguments");
 				return null;
 			}
+			
 		}
 		
 		try {
 			StringBuffer sb = new StringBuffer();
 			
-			if(printType == PrintType.PRINT_ALL || printType == PrintType.PRINT_PARAMETER_ONLY) {
-				sb.append(Arrays.deepToString(args));
+			if(printType == PrintType.PRINT_ALL || printType == PrintType.PRINT_INPUT_ONLY) {
+				sb.append(Arrays.deepToString(invokeArgs));
 				sb.append(" => ");
 			} else if(printType == PrintType.PRINT_MIN) {
-				String param = Arrays.deepToString(args);
+				String param = Arrays.deepToString(invokeArgs);
 				int len = param.length();
 				
 				if(len > 20) {
@@ -366,7 +367,7 @@ public class AlgTester {
 	}
 	
 	private Object parse(Class<?> type, String str) {
-		if(String.class.equals(type)) return true;
+		if(String.class.equals(type)) return str;
 		
 		if(type.isArray()) {
 			return parseArray(type, str);
@@ -415,11 +416,13 @@ public class AlgTester {
 			
 			if(isArray) {
 				result = parseArray(componentType, elements[i].trim());
+			} else if(String.class.equals(componentType)) {
+				result = String.valueOf(elements[i]);
 			} else {
 				result = parseDataType(componentType, elements[i].trim());
 			}
 			
-			if(result == null) return false;
+			System.err.printf("Type Missmatch : %s to %s\r\n", elements[i], componentType.getName());
 			
 			Array.set(array, i, result);
 		}
