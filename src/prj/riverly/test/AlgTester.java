@@ -11,6 +11,7 @@ import java.lang.reflect.InaccessibleObjectException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -35,6 +36,7 @@ public class AlgTester {
 	
 	private NumberFormat numberFormat = NumberFormat.getInstance();
 	
+	@SuppressWarnings("serial")
 	private HashSet<Class<?>> dataTypeSet = new HashSet<Class<?>>(){{
 		add(byte.class);
 		add(Byte.class);
@@ -54,6 +56,7 @@ public class AlgTester {
 		add(Double.class);
 	}};
 	
+	@SuppressWarnings("serial")
 	private HashMap<Class<?>, Class<?>> primitiveTypeMap = new HashMap<Class<?>, Class<?>>(){{
 		put(byte.class, Byte.class);
 		put(char.class, Character.class);
@@ -406,7 +409,7 @@ public class AlgTester {
 		Class<?> componentType = type.getComponentType();
 		boolean isArray = componentType.isArray();
 		
-		String[] elements = str.substring(1, len-1).split(",");
+		String[] elements = splitByElement(str);
 		len = elements.length;
 		
 		Object array = Array.newInstance(componentType, len);
@@ -422,7 +425,7 @@ public class AlgTester {
 				result = parseDataType(componentType, elements[i].trim());
 			}
 			
-			System.err.printf("Type Missmatch : %s to %s\r\n", elements[i], componentType.getName());
+			if(result == null) System.err.printf("Type Missmatch : %s to %s\r\n", elements[i], componentType.getName());
 			
 			Array.set(array, i, result);
 		}
@@ -551,6 +554,35 @@ public class AlgTester {
 			return sb.toString();
 		}
 		
+	}
+	
+	private String[] splitByElement(String array) {
+		int len = array.length();
+		
+		int stack = 0;
+		int off = 1;
+		
+		ArrayList<String> list = new ArrayList<String>();
+		
+		for(int i = 1; i < len-1 ; i++) {
+			char ch = array.charAt(i);
+			
+			if(ch == '[' || ch == '{') stack++;
+			else if(ch == ']' || ch == '}') stack--;
+			else if(stack == 0 && ch == ',') {
+				list.add(array.substring(off, i).trim());
+				off = i+1;
+			}
+		}
+		
+		list.add(array.substring(off,len-1).trim());
+		
+		int resultSize = list.size();
+		
+		while(resultSize > 0 && list.get(resultSize-1).length() == 0) resultSize--;
+		
+		String[] result = new String[resultSize];
+		return list.subList(0, resultSize).toArray(result);
 	}
 	
 	private int foreach(Object obj, Consumer<? super Object> consumer) {
