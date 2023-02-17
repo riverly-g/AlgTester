@@ -366,7 +366,16 @@ public class AlgTester {
 			if(b.isPrimitive()) b = primitiveTypeMap.get(b);
 		}
 		
-		return a.equals(b);
+		boolean success = a.equals(b);
+		
+		if(!success) {
+			try {
+				a.cast(obj);
+				success = true;
+			} catch(Exception e) {}
+		}
+		
+		return success;
 	}
 	
 	private Object parse(Class<?> type, String str) {
@@ -407,7 +416,6 @@ public class AlgTester {
 		if(str.charAt(0) != '[' || str.charAt(len-1) != ']') return null;
 		
 		Class<?> componentType = type.getComponentType();
-		boolean isArray = componentType.isArray();
 		
 		String[] elements = splitByElement(str);
 		len = elements.length;
@@ -416,15 +424,7 @@ public class AlgTester {
 		
 		for(int i = 0; i < len; i++) {
 			Object result = null;
-			
-			if(isArray) {
-				result = parseArray(componentType, elements[i].trim());
-			} else if(String.class.equals(componentType)) {
-				result = String.valueOf(elements[i]);
-			} else {
-				result = parseDataType(componentType, elements[i].trim());
-			}
-			
+			result = parse(componentType, elements[i].trim());
 			if(result == null) System.err.printf("Type Missmatch : %s to %s\r\n", elements[i], componentType.getName());
 			
 			Array.set(array, i, result);
